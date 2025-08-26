@@ -2,7 +2,11 @@ package com.marvel.multidbstore.service;
 
 import com.marvel.multidbstore.entity.RDSProduct;
 import com.marvel.multidbstore.repository.RDSProductRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -11,6 +15,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RDSProductService {
     private final RDSProductRepository repository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public RDSProduct createProduct(RDSProduct product) {
         return repository.save(product);
@@ -32,11 +39,18 @@ public class RDSProductService {
         return repository.save(product);
     }
 
-    public void deleteProduct(Long id) {
-        repository.deleteById(id);
+    public RDSProduct deleteProduct(Long id) {
+        RDSProduct product = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found"));
+        repository.delete(product);
+        return product;
     }
 
+    @Value("${rds.table.name}")
+    private String tableName;
+    @Transactional
     public void clearAllProducts() {
-        repository.deleteAll();
+        String query = "TRUNCATE TABLE " + tableName;
+        entityManager.createNativeQuery(query).executeUpdate();
     }
 }
